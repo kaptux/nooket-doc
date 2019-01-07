@@ -1,2 +1,3 @@
 # nooket-doc
-Pluggable component to add document view to nooket
+
+Pluggable component to add documentation view to nooket

@@ -2,51 +2,6 @@ import { FieldTypeEnum, RuleTypeEnum } from 'nooket-common';
 
 export const categories = [
   {
-    _id: '5',
-    icon: 'red-envelope',
-    name: 'Message',
-    description: 'Mensajes que un usuario puede enviar a otro',
-    canBePrivate: true,
-    privateToMentionPeople: false,
-    fields: [
-      {
-        code: 'to',
-        name: 'To',
-        order: 0,
-        layout: 1,
-        description: 'recipient user',
-        type: FieldTypeEnum.MENTION,
-        rules: [
-          {
-            rule: RuleTypeEnum.REQUIRED,
-            value: null,
-            message: 'Field "to" is required',
-          },
-        ],
-      },
-      {
-        code: 'cc',
-        name: 'CC',
-        order: 1,
-        layout: 1,
-        description: 'carbon copy',
-        type: FieldTypeEnum.ARRAY_OF_MENTION,
-        rules: [
-          {
-            rule: RuleTypeEnum.MIN_LENGTH,
-            value: 0,
-            message: null,
-          },
-          {
-            rule: RuleTypeEnum.MAX_LENGTH,
-            value: 5,
-            message: 'max 5 recipients urser',
-          },
-        ],
-      },
-    ],
-  },
-  {
     _id: '1',
     icon: 'calendar',
     name: 'Event',
@@ -145,6 +100,51 @@ export const categories = [
     privateToMentionPeople: false,
   },
   {
+    _id: '5',
+    icon: 'red-envelope',
+    name: 'Message',
+    description: 'Mensajes que un usuario puede enviar a otro',
+    canBePrivate: true,
+    privateToMentionPeople: false,
+    fields: [
+      {
+        code: 'to',
+        name: 'To',
+        order: 0,
+        layout: 1,
+        description: 'recipient user',
+        type: FieldTypeEnum.MENTION,
+        rules: [
+          {
+            rule: RuleTypeEnum.REQUIRED,
+            value: null,
+            message: 'Field "to" is required',
+          },
+        ],
+      },
+      {
+        code: 'cc',
+        name: 'CC',
+        order: 1,
+        layout: 1,
+        description: 'carbon copy',
+        type: FieldTypeEnum.ARRAY_OF_MENTION,
+        rules: [
+          {
+            rule: RuleTypeEnum.MIN_LENGTH,
+            value: 0,
+            message: null,
+          },
+          {
+            rule: RuleTypeEnum.MAX_LENGTH,
+            value: 5,
+            message: 'max 5 recipients urser',
+          },
+        ],
+      },
+    ],
+  },
+  {
     _id: '6',
     isInternalActivity: true,
     icon: 'thunderbolt',
@@ -197,5 +197,13 @@ export const categories = [
         type: FieldTypeEnum.REFERENCE,
       },
     ],
+  },
+  {
+    _id: '7',
+    icon: 'book',
+    name: 'Documentation',
+    description: 'A piece of documentation',
+    canBePrivate: true,
+    privateToMentionPeople: false,
   },
 ];

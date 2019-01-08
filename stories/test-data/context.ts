@@ -1,7 +1,7 @@
 import { categories } from './categories';
 import { users } from './users';
 import { IViewContext } from 'nooket-common';
-import { arrayOfObjectsToHashmap } from '../../src/utils';
+import { arrayOfObjectsToHashmap } from '../utilities';
 
 const userIds = ['1', '2', '3', '5'];
 

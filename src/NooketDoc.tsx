@@ -49,12 +49,23 @@ const NooketDocContainer = styled.div`
     width: 250px;
     position: fixed;
     background-color: #eee;
+    overflow: auto;
 
     .menu {
       list-style: none;
       margin: 0;
       padding: 0;
     }
+  }
+
+  .doc-index::-webkit-scrollbar {
+    width: 5px;
+    height: 10px;
+    background-color: #eee;
+  }
+  .doc-index::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 5px;
   }
 
   .doc-body {
@@ -122,6 +133,8 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     instanceView: null,
   };
 
+  private helperContainerRef = React.createRef();
+
   private currentSortedMenu: IMenuItem[];
 
   private handleSortEnd = ({ oldIndex, newIndex }) => {
@@ -180,7 +193,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     }
 
     return (
-      <NooketDocContainer>
+      <NooketDocContainer ref={this.helperContainerRef}>
         <div className="doc-index">
           <SortableList
             items={items}
@@ -189,6 +202,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
             hideSortableGhost={true}
             useDragHandle={true}
             onClick={this.handleMenuClick}
+            helperContainer={this.helperContainerRef.current as HTMLElement}
           />
         </div>
         <div className="doc-body">{instanceView}</div>

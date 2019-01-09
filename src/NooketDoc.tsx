@@ -1,13 +1,7 @@
 import * as React from 'react';
 import styled from 'styled-components';
 import classNames from 'classnames';
-import {
-  IViewPluginProps,
-  IUser,
-  ICategory,
-  RuleTypeEnum,
-  InstanceViewModeEnum,
-} from 'nooket-common';
+import { IViewPluginProps, InstanceViewModeEnum } from 'nooket-common';
 import {
   SortableContainer,
   SortableElement,
@@ -48,11 +42,13 @@ const NooketDocContainer = styled.div`
   margin: 0 auto;
   display: flex;
   flex-direction: row;
+  margin: 16px;
 
   .doc-index {
-    height: calc(100vh - 70px);
+    height: calc(100vh - 70px - 32px);
     width: 250px;
     position: fixed;
+    background-color: #eee;
 
     .menu {
       list-style: none;
@@ -91,7 +87,7 @@ const SortableItem = SortableElement(
   ({ value, onClick, isSelected }: ISortableItemProps) => {
     return (
       <ListElementContainer
-        className={classNames('menu-item', { 'menu-selected': isSelected })}
+        className={classNames({ 'menu-selected': isSelected })}
         onClick={() => onClick(value._id)}
       >
         <DragHandle />
@@ -125,6 +121,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     selectedId: null,
     instanceView: null,
   };
+
   private currentSortedMenu: IMenuItem[];
 
   private handleSortEnd = ({ oldIndex, newIndex }) => {
@@ -137,6 +134,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     );
     onSaveState({ instanceOrder });
   };
+
   private handleMenuClick = id => {
     const { onRequestInstanceView } = this.props;
     this.setState({
@@ -144,6 +142,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
       instanceView: onRequestInstanceView(InstanceViewModeEnum.INLINE, id),
     });
   };
+
   private getSortedData(): IMenuItem[] {
     const {
       data,
@@ -166,9 +165,19 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     );
     return this.currentSortedMenu;
   }
+
   public render() {
-    const { instanceView, selectedId } = this.state;
     const items = this.getSortedData();
+    const { onRequestInstanceView } = this.props;
+    let { instanceView, selectedId } = this.state;
+
+    if (instanceView == null && items.length > 0) {
+      selectedId = items[0]._id;
+      instanceView = onRequestInstanceView(
+        InstanceViewModeEnum.INLINE,
+        selectedId
+      );
+    }
 
     return (
       <NooketDocContainer>

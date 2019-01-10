@@ -72,6 +72,11 @@ const NooketDocContainer = styled.div`
   .doc-body {
     flex: 1;
   }
+
+  .helper-class {
+    border: solid 1px red;
+    z-index: 100000;
+  }
 `;
 
 interface IMenuItem {
@@ -219,7 +224,8 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
               hideSortableGhost={true}
               useDragHandle={true}
               onClick={this.handleMenuClick}
-              helperContainer={container && container.querySelector('.menu')}
+              helperContainer={container}
+              helperClass="helper-class"
             />
           </div>
         </Affix>

@@ -131,11 +131,16 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
   public state = {
     selectedId: null,
     instanceView: null,
+    container: null,
   };
 
   private helperContainerRef = React.createRef();
 
   private currentSortedMenu: IMenuItem[];
+
+  private setContainerNode = node => {
+    this.setState({ container: node });
+  };
 
   private handleSortEnd = ({ oldIndex, newIndex }) => {
     const { onSaveState } = this.props;
@@ -179,14 +184,17 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     return this.currentSortedMenu;
   }
 
-  public componentDidMount() {
-    const element = this.helperContainerRef.current as HTMLElement;
-    element.focus();
+  public componentDidUpdate() {
+    const { container } = this.state;
+    if (container) {
+      container.querySelector('.menu').focus();
+    }
   }
 
   public render() {
     const items = this.getSortedData();
     const { onRequestInstanceView } = this.props;
+    const { container } = this.state;
     let { instanceView, selectedId } = this.state;
 
     if (instanceView == null && items.length > 0) {
@@ -198,14 +206,16 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     }
 
     return (
-      <NooketDocContainer ref={this.helperContainerRef}>
+      <NooketDocContainer ref={this.setContainerNode}>
         <Affix
           offsetTop={18}
           target={() => {
             // must be the scrollable panel
-            const htmlElement = this.helperContainerRef.current as HTMLElement;
-            const parent = htmlElement.parentElement;
-            return parent;
+            const htmlElement = container as HTMLElement;
+            if (htmlElement) {
+              const parent = htmlElement.parentElement;
+              return parent;
+            }
           }}
         >
           <div className="doc-index">
@@ -216,7 +226,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
               hideSortableGhost={true}
               useDragHandle={true}
               onClick={this.handleMenuClick}
-              helperContainer={this.helperContainerRef.current as HTMLElement}
+              helperContainer={container}
             />
           </div>
         </Affix>

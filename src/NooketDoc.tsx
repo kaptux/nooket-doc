@@ -184,13 +184,6 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     return this.currentSortedMenu;
   }
 
-  public componentDidUpdate() {
-    const { container } = this.state;
-    if (container) {
-      container.querySelector('.menu').focus();
-    }
-  }
-
   public render() {
     const items = this.getSortedData();
     const { onRequestInstanceView } = this.props;
@@ -226,7 +219,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
               hideSortableGhost={true}
               useDragHandle={true}
               onClick={this.handleMenuClick}
-              helperContainer={container}
+              helperContainer={container && container.querySelector('.menu')}
             />
           </div>
         </Affix>

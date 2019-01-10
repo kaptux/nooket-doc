@@ -1,6 +1,6 @@
 {
   "name": "nooket-doc",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Pluggable component to add a documentation view to nooket instance",
   "main": "lib/index.js",
   "scripts": {

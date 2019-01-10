@@ -74,8 +74,10 @@ const NooketDocContainer = styled.div`
   }
 
   .helper-class {
-    border: solid 1px red;
     z-index: 100000;
+    box-shadow: 0 5px 5px -5px rgba(0, 0, 0, 0.2),
+      0 -5px 5px -5px rgba(0, 0, 0, 0.2);
+    background-color: #eee;
   }
 `;
 
@@ -226,6 +228,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
               onClick={this.handleMenuClick}
               helperContainer={container}
               helperClass="helper-class"
+              lockAxis="y"
             />
           </div>
         </Affix>

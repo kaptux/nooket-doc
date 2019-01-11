@@ -43,7 +43,6 @@ const NooketDocContainer = styled.div`
   flex-direction: row;
   height: 100%;
   width: 100%;
-  border: solid 2px green;
 
   .doc-index {
     position: relative;
@@ -66,12 +65,12 @@ const NooketDocContainer = styled.div`
     }
   }
 
-  .doc-index::-webkit-scrollbar {
+  .menu::-webkit-scrollbar {
     width: 5px;
     height: 10px;
     background-color: #eee;
   }
-  .doc-index::-webkit-scrollbar-thumb {
+  .menu::-webkit-scrollbar-thumb {
     background: #ccc;
     border-radius: 5px;
   }
@@ -170,7 +169,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     }
 
     if (!selectedId && data.length > 0) {
-      selectedId = data[0]._id;
+      selectedId = items[0]._id;
       instanceView = nextProps.onRequestInstanceView(
         InstanceViewModeEnum.INLINE,
         selectedId
@@ -244,7 +243,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
             lockAxis="y"
           />
         </div>
-        <div className="doc-body">{instanceView}</div>
+        <div className="doc-body plugin-scroll-panel">{instanceView}</div>
       </NooketDocContainer>
     );
   }

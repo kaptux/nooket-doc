@@ -9,6 +9,7 @@ import {
   arrayMove,
   SortableHandle,
 } from 'react-sortable-hoc';
+import { getStorybook } from '@storybook/react';
 
 const MIN_ORDER = 0;
 
@@ -136,14 +137,44 @@ const SortableList = SortableContainer(
 
 class NooketDoc extends React.Component<IViewPluginProps, any> {
   public state = {
+    items: null,
     selectedId: null,
     instanceView: null,
     container: null,
+    lastFetchTimestamp: null,
   };
 
-  private helperContainerRef = React.createRef();
+  public static getDerivedStateFromProps(nextProps, currentState) {
+    const {
+      data,
+      view: { state },
+      fetchTimestamp,
+    } = nextProps;
 
-  private currentSortedMenu: IMenuItem[];
+    const { container, lastFetchTimestamp } = currentState;
+    let { selectedId, instanceView, items } = currentState;
+
+    if (lastFetchTimestamp !== fetchTimestamp) {
+      const viewState = state || { instanceOrder: {} };
+      items = NooketDoc.getSortedData(data, viewState);
+    }
+
+    if (!selectedId && data.length > 0) {
+      selectedId = data[0]._id;
+      instanceView = nextProps.onRequestInstanceView(
+        InstanceViewModeEnum.INLINE,
+        selectedId
+      );
+    }
+
+    return {
+      items,
+      selectedId,
+      instanceView,
+      container,
+      lastFetchTimestamp: fetchTimestamp,
+    };
+  }
 
   private setContainerNode = node => {
     this.setState({ container: node });
@@ -151,12 +182,15 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
 
   private handleSortEnd = ({ oldIndex, newIndex }) => {
     const { onSaveState } = this.props;
+    const { items } = this.state;
+
     const instanceOrder = {};
-    arrayMove(this.currentSortedMenu, oldIndex, newIndex).forEach(
-      (item, index) => {
-        instanceOrder[item._id] = index;
-      }
-    );
+    const newOrderedItems = arrayMove(items, oldIndex, newIndex) as IMenuItem[];
+    newOrderedItems.forEach((item, index) => {
+      instanceOrder[item._id] = index;
+    });
+
+    this.setState({ items: newOrderedItems });
     onSaveState({ instanceOrder });
   };
 
@@ -168,13 +202,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     });
   };
 
-  private getSortedData(): IMenuItem[] {
-    const {
-      data,
-      view: { state },
-    } = this.props;
-    const viewState = state || { instanceOrder: {} };
-
+  private static getSortedData(data, viewState): IMenuItem[] {
     const res: IMenuItem[] = [];
 
     data.forEach(instance => {
@@ -185,25 +213,11 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
       });
     });
 
-    this.currentSortedMenu = res.sort(
-      (item1, item2) => item1.order - item2.order
-    );
-    return this.currentSortedMenu;
+    return res.sort((item1, item2) => item1.order - item2.order);
   }
 
   public render() {
-    const items = this.getSortedData();
-    const { onRequestInstanceView } = this.props;
-    const { container } = this.state;
-    let { instanceView, selectedId } = this.state;
-
-    if (instanceView == null && items.length > 0) {
-      selectedId = items[0]._id;
-      instanceView = onRequestInstanceView(
-        InstanceViewModeEnum.INLINE,
-        selectedId
-      );
-    }
+    const { instanceView, selectedId, items, container } = this.state;
 
     return (
       <NooketDocContainer ref={this.setContainerNode}>

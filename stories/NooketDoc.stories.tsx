@@ -24,6 +24,7 @@ const propsNoSettings: IViewPluginProps = {
   onSaveInstance: action('onSaveInstance'),
   onSaveState: action('onSaveState'),
   onSaveSettings: action('onSaveSetings'),
+  fetchTimestamp: new Date().getTime(),
 };
 
 import 'antd/dist/antd.min.css';

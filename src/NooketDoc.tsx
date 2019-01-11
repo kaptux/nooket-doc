@@ -1,6 +1,5 @@
 import * as React from 'react';
 import styled from 'styled-components';
-import { Affix } from 'antd';
 import classNames from 'classnames';
 import { IViewPluginProps, InstanceViewModeEnum } from 'nooket-common';
 import {
@@ -9,7 +8,6 @@ import {
   arrayMove,
   SortableHandle,
 } from 'react-sortable-hoc';
-import { getStorybook } from '@storybook/react';
 
 const MIN_ORDER = 0;
 
@@ -41,22 +39,30 @@ const ListElementContainer = styled.div`
 `;
 
 const NooketDocContainer = styled.div`
-  margin: 0 auto;
   display: flex;
   flex-direction: row;
-  margin: 16px;
+  height: 100%;
+  width: 100%;
+  border: solid 2px green;
 
   .doc-index {
-    height: calc(100vh - 70px - 32px);
     position: relative;
     width: 250px;
-    background-color: #eee;
-    overflow: auto;
+    position: relative;
+    height: 100%;
 
-    position: relative .menu {
-      list-style: none;
-      margin: 0;
-      padding: 0;
+    .menu {
+      overflow: auto;
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+
+      background-color: #eee;
+      margin-top: 16px;
+      margin-left: 16px;
+      margin-bottom: 16px;
     }
   }
 
@@ -72,6 +78,10 @@ const NooketDocContainer = styled.div`
 
   .doc-body {
     flex: 1;
+    overflow: auto;
+    padding-right: 16px;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
 
   .helper-class {
@@ -221,31 +231,19 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
 
     return (
       <NooketDocContainer ref={this.setContainerNode}>
-        <Affix
-          offsetTop={18}
-          target={() => {
-            // must be the scrollable panel
-            const htmlElement = container as HTMLElement;
-            if (htmlElement) {
-              const parent = htmlElement.parentElement;
-              return parent;
-            }
-          }}
-        >
-          <div className="doc-index">
-            <SortableList
-              items={items}
-              selectedId={selectedId}
-              onSortEnd={this.handleSortEnd}
-              hideSortableGhost={true}
-              useDragHandle={true}
-              onClick={this.handleMenuClick}
-              helperContainer={container}
-              helperClass="helper-class"
-              lockAxis="y"
-            />
-          </div>
-        </Affix>
+        <div className="doc-index">
+          <SortableList
+            items={items}
+            selectedId={selectedId}
+            onSortEnd={this.handleSortEnd}
+            hideSortableGhost={true}
+            useDragHandle={true}
+            onClick={this.handleMenuClick}
+            helperContainer={container}
+            helperClass="helper-class"
+            lockAxis="y"
+          />
+        </div>
         <div className="doc-body">{instanceView}</div>
       </NooketDocContainer>
     );

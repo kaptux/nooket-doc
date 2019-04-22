@@ -2,6 +2,8 @@ import * as React from 'react';
 import styled from 'styled-components';
 import classNames from 'classnames';
 import { IViewPluginProps, InstanceViewModeEnum } from 'nooket-common';
+import { Input } from 'antd';
+import * as Fuse from 'fuse.js';
 import {
   SortableContainer,
   SortableElement,
@@ -18,6 +20,12 @@ const ListElementContainer = styled.div`
   display: block;
   cursor: pointer;
 
+  &.menu-selected {
+    color: #1890ff;
+    font-weight: 500;
+    border-right: 3px #1890ff solid;
+  }
+
   .drag-handle {
     display: inline-block;
     width: 11px;
@@ -29,12 +37,6 @@ const ListElementContainer = styled.div`
     opacity: 0.25;
     margin-right: 5px;
     cursor: row-resize;
-  }
-
-  &.menu-selected {
-    color: #1890ff;
-    font-weight: 500;
-    border-right: 3px #1890ff solid;
   }
 `;
 
@@ -83,6 +85,10 @@ const NooketDocContainer = styled.div`
     padding-bottom: 16px;
   }
 
+  .highlight {
+    background-color: yellow;
+  }
+
   .helper-class {
     z-index: 100000;
     box-shadow: 0 5px 5px -5px rgba(0, 0, 0, 0.2),
@@ -94,25 +100,57 @@ const NooketDocContainer = styled.div`
 interface IMenuItem {
   _id: string;
   title: string;
+  sanitizedTitle: string;
   order: number;
 }
 
 interface ISortableListProps {
   items: IMenuItem[];
   selectedId: string;
+  searchResults: any;
   onClick: (id: string) => void;
 }
 
 interface ISortableItemProps {
   value: IMenuItem;
   isSelected: boolean;
+  searchWords: string[];
   onClick: (id: string) => void;
 }
 
+const fuzeOptions = {
+  shouldSort: true,
+  tokenize: true,
+  matchAllTokens: true,
+  findAllMatches: true,
+  includeMatches: true,
+  threshold: 0.0,
+  location: 0,
+  distance: 100,
+  maxPatternLength: 32,
+  minMatchCharLength: 2,
+  keys: ['sanitizedTitle'],
+};
 const DragHandle = SortableHandle(() => <div className="drag-handle" />);
 
+const Highlight = ({ text, words }) => (
+  <React.Fragment>
+    {[...text].map((c, i) => {
+      const highlight = words.find(a => i >= a[0] && i <= a[1]);
+      return (
+        <span key={`${i}`} className={classNames({ highlight })}>
+          {c}
+        </span>
+      );
+    })}
+  </React.Fragment>
+);
+
+const sanitizeText = text =>
+  text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 const SortableItem = SortableElement(
-  ({ value, onClick, isSelected }: ISortableItemProps) => {
+  ({ value, onClick, isSelected, searchWords }: ISortableItemProps) => {
     return (
       <ListElementContainer
         className={classNames({ 'menu-selected': isSelected })}
@@ -120,16 +158,20 @@ const SortableItem = SortableElement(
       >
         <DragHandle />
         &nbsp;
-        {value.title}
+        {searchWords ? (
+          <Highlight text={value.title} words={searchWords} />
+        ) : (
+          value.title
+        )}
       </ListElementContainer>
     );
   }
 );
 
 const SortableList = SortableContainer(
-  ({ items, selectedId, onClick }: ISortableListProps) => {
+  ({ items, selectedId, onClick, searchResults }: ISortableListProps) => {
     return (
-      <div className="menu">
+      <React.Fragment>
         {items.map((value, index) => (
           <SortableItem
             key={value._id}
@@ -137,9 +179,10 @@ const SortableList = SortableContainer(
             index={index}
             value={value}
             onClick={onClick}
+            searchWords={searchResults[value._id]}
           />
         ))}
-      </div>
+      </React.Fragment>
     );
   }
 );
@@ -151,6 +194,10 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     instanceView: null,
     container: null,
     lastFetchTimestamp: null,
+    idx: null,
+    searchTerm: null,
+    filteredItems: null,
+    searchResults: {},
   };
 
   public static getDerivedStateFromProps(nextProps, currentState) {
@@ -161,11 +208,23 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     } = nextProps;
 
     const { container, lastFetchTimestamp } = currentState;
-    let { selectedId, instanceView, items } = currentState;
+    let {
+      selectedId,
+      instanceView,
+      items,
+      idx,
+      searchTerm,
+      filteredItems,
+      searchResults,
+    } = currentState;
 
     if (lastFetchTimestamp !== fetchTimestamp) {
       const viewState = state || { instanceOrder: {} };
+      searchTerm = null;
+      filteredItems = null;
+      searchResults = {};
       items = NooketDoc.getSortedData(data, viewState);
+      idx = new Fuse(items, fuzeOptions);
     }
 
     if (!selectedId && data.length > 0) {
@@ -182,11 +241,49 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
       instanceView,
       container,
       lastFetchTimestamp: fetchTimestamp,
+      idx,
+      searchTerm,
+      filteredItems,
+      searchResults,
     };
   }
 
   private setContainerNode = node => {
     this.setState({ container: node });
+  };
+
+  private handelOnChangeSearch = e => {
+    const { value } = e.target;
+    const { idx, items } = this.state;
+
+    let filteredItems = items;
+    const searchResults = {};
+
+    const searchTerm = value;
+    const sanitizedText = sanitizeText(value.trim());
+
+    if (sanitizedText !== '') {
+      const results = idx.search(sanitizedText);
+      if (results) {
+        filteredItems = [];
+        results.forEach(r => {
+          if (r.matches.length > 0) {
+            filteredItems.push(r.item);
+            const indices = [];
+            r.matches.forEach(m => indices.push(...m.indices));
+            searchResults[r.item._id] = indices;
+          }
+        });
+      }
+    } else {
+      filteredItems = null;
+    }
+
+    this.setState({
+      searchTerm,
+      filteredItems,
+      searchResults,
+    });
   };
 
   private handleSortEnd = ({ oldIndex, newIndex }) => {
@@ -218,6 +315,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
       res.push({
         _id: instance._id,
         title: instance.title,
+        sanitizedTitle: sanitizeText(instance.title),
         order: viewState.instanceOrder[instance._id] || MIN_ORDER,
       });
     });
@@ -226,22 +324,39 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
   }
 
   public render() {
-    const { instanceView, selectedId, items, container } = this.state;
+    const {
+      instanceView,
+      selectedId,
+      items,
+      filteredItems,
+      container,
+      searchTerm,
+      searchResults,
+    } = this.state;
 
     return (
       <NooketDocContainer ref={this.setContainerNode}>
         <div className="doc-index">
-          <SortableList
-            items={items}
-            selectedId={selectedId}
-            onSortEnd={this.handleSortEnd}
-            hideSortableGhost={true}
-            useDragHandle={true}
-            onClick={this.handleMenuClick}
-            helperContainer={container}
-            helperClass="helper-class"
-            lockAxis="y"
-          />
+          <div className="menu">
+            <Input
+              placeholder="search"
+              onChange={this.handelOnChangeSearch}
+              style={{ margin: 6, width: 'calc(100% - 12px)' }}
+              value={searchTerm}
+            />
+            <SortableList
+              items={filteredItems || items}
+              selectedId={selectedId}
+              onSortEnd={this.handleSortEnd}
+              hideSortableGhost={true}
+              useDragHandle={true}
+              onClick={this.handleMenuClick}
+              helperContainer={container}
+              helperClass="helper-class"
+              lockAxis="y"
+              searchResults={searchResults}
+            />
+          </div>
         </div>
         <div className="doc-body plugin-scroll-panel">{instanceView}</div>
       </NooketDocContainer>

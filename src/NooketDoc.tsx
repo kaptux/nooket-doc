@@ -171,7 +171,7 @@ const SortableItem = SortableElement(
 const SortableList = SortableContainer(
   ({ items, selectedId, onClick, searchResults }: ISortableListProps) => {
     return (
-      <React.Fragment>
+      <div>
         {items.map((value, index) => (
           <SortableItem
             key={value._id}
@@ -182,7 +182,7 @@ const SortableList = SortableContainer(
             searchWords={searchResults[value._id]}
           />
         ))}
-      </React.Fragment>
+      </div>
     );
   }
 );
@@ -344,6 +344,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
               style={{ margin: 6, width: 'calc(100% - 12px)' }}
               value={searchTerm}
             />
+
             <SortableList
               items={filteredItems || items}
               selectedId={selectedId}

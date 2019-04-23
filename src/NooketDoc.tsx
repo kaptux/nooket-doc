@@ -1,8 +1,10 @@
 import * as React from 'react';
 import styled from 'styled-components';
 import classNames from 'classnames';
+import * as moment from 'moment';
+import * as memoize from 'memoize-one';
 import { IViewPluginProps, InstanceViewModeEnum } from 'nooket-common';
-import { Input } from 'antd';
+import { Input, Drawer, Button, Icon } from 'antd';
 import * as Fuse from 'fuse.js';
 import {
   SortableContainer,
@@ -11,7 +13,21 @@ import {
   SortableHandle,
 } from 'react-sortable-hoc';
 
+import SettingsForm from './SettingsForm';
+
 const MIN_ORDER = 0;
+
+const ListHeaderContainer = styled.div`
+  list-style: none;
+  margin: 0;
+  padding: 5px 10px;
+  display: block;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: #aaa;
+  font-weight: 500;
+`;
 
 const ListElementContainer = styled.div`
   list-style: none;
@@ -97,11 +113,23 @@ const NooketDocContainer = styled.div`
   }
 `;
 
+const DrawerButtons = styled.div`
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  border-top: 1px solid #e9e9e9;
+  padding: 10px 16px;
+  background: #fff;
+  text-align: right;
+`;
+
 interface IMenuItem {
   _id: string;
   title: string;
   sanitizedTitle: string;
   order: number;
+  createdAt: Date;
 }
 
 interface ISortableListProps {
@@ -149,24 +177,24 @@ const Highlight = ({ text, words }) => (
 const sanitizeText = text =>
   text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-const SortableItem = SortableElement(
-  ({ value, onClick, isSelected, searchWords }: ISortableItemProps) => {
-    return (
-      <ListElementContainer
-        className={classNames({ 'menu-selected': isSelected })}
-        onClick={() => onClick(value._id)}
-      >
-        <DragHandle />
-        &nbsp;
-        {searchWords ? (
-          <Highlight text={value.title} words={searchWords} />
-        ) : (
-          value.title
-        )}
-      </ListElementContainer>
-    );
-  }
+const ListElement = ({ value, onClick, isSelected, searchWords, sortable }) => (
+  <ListElementContainer
+    className={classNames({ 'menu-selected': isSelected })}
+    onClick={() => onClick(value._id)}
+  >
+    {sortable && <DragHandle />}
+    &nbsp;
+    {searchWords ? (
+      <Highlight text={value.title} words={searchWords} />
+    ) : (
+      value.title
+    )}
+  </ListElementContainer>
 );
+
+const SortableItem = SortableElement((props: ISortableItemProps) => (
+  <ListElement {...props} sortable={true} />
+));
 
 const SortableList = SortableContainer(
   ({ items, selectedId, onClick, searchResults }: ISortableListProps) => {
@@ -187,9 +215,61 @@ const SortableList = SortableContainer(
   }
 );
 
+const List = ({ items, selectedId, onClick, searchResults }) => {
+  return (
+    <div>
+      {items.map((value, index) => (
+        <ListElement
+          value={value}
+          onClick={onClick}
+          isSelected={value._id === selectedId}
+          searchWords={searchResults[value._id]}
+          sortable={false}
+        />
+      ))}
+    </div>
+  );
+};
+
+const GroupList = ({ items, selectedId, onClick, searchResults }) => {
+  const groups = getGroups(items);
+  const keys = Object.keys(groups);
+  return (
+    <div>
+      {keys.map(k => (
+        <React.Fragment>
+          <ListHeaderContainer>{k}</ListHeaderContainer>
+          {groups[k].map((value, index) => (
+            <ListElement
+              value={value}
+              onClick={onClick}
+              isSelected={value._id === selectedId}
+              searchWords={searchResults[value._id]}
+              sortable={false}
+            />
+          ))}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
+const getGroups = memoize(items => {
+  const res = {};
+  items.forEach(i => {
+    const group = moment(i.createdAt).format('MMM-YYYY');
+    const groupEl = res[group] || [];
+    groupEl.push(i);
+    res[group] = groupEl;
+  });
+  return res;
+});
+
 class NooketDoc extends React.Component<IViewPluginProps, any> {
+  private settingsForm = null;
+
   public state = {
-    items: null,
+    items: [],
     selectedId: null,
     instanceView: null,
     container: null,
@@ -198,16 +278,17 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     searchTerm: null,
     filteredItems: null,
     searchResults: {},
+    showSettingDialog: false,
   };
 
   public static getDerivedStateFromProps(nextProps, currentState) {
     const {
       data,
-      view: { state },
+      view: { state, settings },
       fetchTimestamp,
     } = nextProps;
 
-    const { container, lastFetchTimestamp } = currentState;
+    const { container, lastFetchTimestamp, showSettingDialog } = currentState;
     let {
       selectedId,
       instanceView,
@@ -218,16 +299,20 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
       searchResults,
     } = currentState;
 
-    if (lastFetchTimestamp !== fetchTimestamp) {
+    if (settings && lastFetchTimestamp !== fetchTimestamp) {
       const viewState = state || { instanceOrder: {} };
       searchTerm = null;
       filteredItems = null;
       searchResults = {};
-      items = NooketDoc.getSortedData(data, viewState);
+      items = NooketDoc.getSortedData(
+        data,
+        viewState,
+        settings.allowManualOrder
+      );
       idx = new Fuse(items, fuzeOptions);
     }
 
-    if (!selectedId && data.length > 0) {
+    if (!selectedId && items.length > 0) {
       selectedId = items[0]._id;
       instanceView = nextProps.onRequestInstanceView(
         InstanceViewModeEnum.INLINE,
@@ -245,8 +330,13 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
       searchTerm,
       filteredItems,
       searchResults,
+      showSettingDialog,
     };
   }
+
+  private setSettingsForm = formRef => {
+    this.settingsForm = formRef;
+  };
 
   private setContainerNode = node => {
     this.setState({ container: node });
@@ -300,6 +390,29 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     onSaveState({ instanceOrder });
   };
 
+  private handleCancelSettings = () => {
+    this.setState({ showSettingDialog: false });
+  };
+
+  private handleShowSettings = () => {
+    this.setState({ showSettingDialog: true });
+  };
+
+  private handleSaveSettings = () => {
+    const { onSaveSettings } = this.props;
+    const {
+      props: { form },
+    } = this.settingsForm;
+
+    form.validateFields((err, values) => {
+      if (err) {
+        return;
+      }
+
+      onSaveSettings(values, () => this.setState({ showSettingDialog: false }));
+    });
+  };
+
   private handleMenuClick = id => {
     const { onRequestInstanceView } = this.props;
     this.setState({
@@ -308,7 +421,7 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
     });
   };
 
-  private static getSortedData(data, viewState): IMenuItem[] {
+  private static getSortedData(data, viewState, sorted): IMenuItem[] {
     const res: IMenuItem[] = [];
 
     data.forEach(instance => {
@@ -317,13 +430,18 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
         title: instance.title,
         sanitizedTitle: sanitizeText(instance.title),
         order: viewState.instanceOrder[instance._id] || MIN_ORDER,
+        createdAt: instance.createdAt,
       });
     });
 
-    return res.sort((item1, item2) => item1.order - item2.order);
+    return sorted ? res.sort((item1, item2) => item1.order - item2.order) : res;
   }
 
   public render() {
+    const {
+      view: { query, settings },
+      context,
+    } = this.props;
     const {
       instanceView,
       selectedId,
@@ -332,7 +450,10 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
       container,
       searchTerm,
       searchResults,
+      showSettingDialog,
     } = this.state;
+
+    const category = context.categoriesHashmap[query.categoryId];
 
     return (
       <NooketDocContainer ref={this.setContainerNode}>
@@ -343,23 +464,71 @@ class NooketDoc extends React.Component<IViewPluginProps, any> {
               onChange={this.handelOnChangeSearch}
               style={{ margin: 6, width: 'calc(100% - 12px)' }}
               value={searchTerm}
+              addonAfter={
+                <Icon type="setting" onClick={this.handleShowSettings} />
+              }
             />
 
-            <SortableList
-              items={filteredItems || items}
-              selectedId={selectedId}
-              onSortEnd={this.handleSortEnd}
-              hideSortableGhost={true}
-              useDragHandle={true}
-              onClick={this.handleMenuClick}
-              helperContainer={container}
-              helperClass="helper-class"
-              lockAxis="y"
-              searchResults={searchResults}
-            />
+            {!settings ? (
+              <React.Fragment />
+            ) : settings.allowManualOrder ? (
+              <SortableList
+                items={filteredItems || items}
+                selectedId={selectedId}
+                onSortEnd={this.handleSortEnd}
+                hideSortableGhost={true}
+                useDragHandle={true}
+                onClick={this.handleMenuClick}
+                helperContainer={container}
+                helperClass="helper-class"
+                lockAxis="y"
+                searchResults={searchResults}
+              />
+            ) : settings.allowGrouping ? (
+              <GroupList
+                items={filteredItems || items}
+                selectedId={selectedId}
+                onClick={this.handleMenuClick}
+                searchResults={searchResults}
+              />
+            ) : (
+              <List
+                items={filteredItems || items}
+                selectedId={selectedId}
+                onClick={this.handleMenuClick}
+                searchResults={searchResults}
+              />
+            )}
           </div>
         </div>
         <div className="doc-body plugin-scroll-panel">{instanceView}</div>
+        <Drawer
+          visible={showSettingDialog || !settings}
+          width={500}
+          title="View settings"
+          onClose={this.handleCancelSettings}
+          style={{
+            paddingBottom: '32px',
+          }}
+        >
+          <SettingsForm
+            wrappedComponentRef={this.setSettingsForm}
+            category={category}
+            {...settings || {}}
+          />
+          <DrawerButtons>
+            <Button
+              onClick={this.handleCancelSettings}
+              style={{ marginRight: 8 }}
+              disabled={!settings}
+            >
+              Cancel
+            </Button>
+            <Button onClick={this.handleSaveSettings} type="primary">
+              Save
+            </Button>
+          </DrawerButtons>
+        </Drawer>
       </NooketDocContainer>
     );
   }

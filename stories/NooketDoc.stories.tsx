@@ -10,12 +10,12 @@ import NooketDoc from '../src/NooketDoc';
 import { context } from './test-data/context';
 import { instances } from './test-data/instances';
 
-const propsNoSettings: IViewPluginProps = {
+const withSettings = (settings: any): IViewPluginProps => ({
   view: {
     type: '',
     query: { categoryId: '2' },
     state: null,
-    settings: null,
+    settings,
   },
   context,
   data: instances.filter(i => i.categoryId === '7'),
@@ -25,15 +25,35 @@ const propsNoSettings: IViewPluginProps = {
   onSaveState: action('onSaveState'),
   onSaveSettings: action('onSaveSetings'),
   fetchTimestamp: new Date().getTime(),
-};
+});
 
 import 'antd/dist/antd.min.css';
 
-storiesOf('NooketDoc', module).add('default', () => (
-  <StoryContainer>
-    <NooketDoc {...propsNoSettings} />
-  </StoryContainer>
-));
+storiesOf('NooketDoc', module)
+  .add('no-settings', () => (
+    <StoryContainer>
+      <NooketDoc {...withSettings(null)} />
+    </StoryContainer>
+  ))
+  .add('manual-order', () => (
+    <StoryContainer>
+      <NooketDoc {...withSettings({ allowManualOrder: true })} />
+    </StoryContainer>
+  ))
+  .add('default-order', () => (
+    <StoryContainer>
+      <NooketDoc
+        {...withSettings({ allowManualOrder: false, allowGrouping: false })}
+      />
+    </StoryContainer>
+  ))
+  .add('grouped', () => (
+    <StoryContainer>
+      <NooketDoc
+        {...withSettings({ allowManualOrder: false, allowGrouping: true })}
+      />
+    </StoryContainer>
+  ));
 
 // #region Utilities
 const handleRequestInstanceView = () => (
